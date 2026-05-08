@@ -3,8 +3,8 @@
 	"properties": {
 		"activities": [
 			{
-				"name": "Validate_Bronze",
-				"type": "Script",
+				"name": "Copy_Bronze_to_Silver",
+				"type": "Copy",
 				"dependsOn": [],
 				"policy": {
 					"timeout": "0.12:00:00",
@@ -14,26 +14,213 @@
 					"secureInput": false
 				},
 				"userProperties": [],
-				"linkedServiceName": {
-					"referenceName": "ls_synapse_serverless",
-					"type": "LinkedServiceReference"
-				},
 				"typeProperties": {
-					"scripts": [
-						{
-							"type": "NonQuery",
-							"text": "SELECT COUNT(*) as view_count \nFROM sys.views \nWHERE name = 'bronze_raw_transactions'"
+					"source": {
+						"type": "JsonSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "JsonReadSettings"
 						}
-					],
-					"scriptBlockExecutionTimeout": "02:00:00"
-				}
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"preCopyScript": "TRUNCATE TABLE silver.transactions",
+						"writeBehavior": "Insert",
+						"sqlWriterUseTableLock": false,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"path": "$['event_id']"
+								}
+							},
+							{
+								"source": {
+									"path": "$['event_type']"
+								}
+							},
+							{
+								"source": {
+									"path": "$['event_timestamp']"
+								}
+							},
+							{
+								"source": {
+									"path": "$['transaction_id']"
+								},
+								"sink": {
+									"name": "transaction_id",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['cardholder_id']"
+								},
+								"sink": {
+									"name": "cardholder_id",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['merchant_id']"
+								},
+								"sink": {
+									"name": "merchant_id",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['transaction_type']"
+								},
+								"sink": {
+									"name": "transaction_type",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['payment_method']"
+								},
+								"sink": {
+									"name": "payment_method",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['channel']"
+								},
+								"sink": {
+									"name": "channel",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['network']"
+								},
+								"sink": {
+									"name": "network",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['amount_cad']"
+								},
+								"sink": {
+									"name": "amount_cad",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"path": "$['currency']"
+								}
+							},
+							{
+								"source": {
+									"path": "$['response_code']"
+								},
+								"sink": {
+									"name": "response_code",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['terminal_id']"
+								}
+							},
+							{
+								"source": {
+									"path": "$['device_fingerprint']"
+								}
+							},
+							{
+								"source": {
+									"path": "$['ip_address_hash']"
+								}
+							},
+							{
+								"source": {
+									"path": "$['ip_country']"
+								},
+								"sink": {
+									"name": "ip_country",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['is_international']"
+								},
+								"sink": {
+									"name": "is_international",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['processing_time_ms']"
+								},
+								"sink": {
+									"name": "processing_time_ms",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"path": "$['is_flagged_suspicious']"
+								},
+								"sink": {
+									"name": "is_flagged_suspicious",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['session_id']"
+								}
+							},
+							{
+								"source": {
+									"path": "$['partition_key']"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_bronze_transactions",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_silver_transactions",
+						"type": "DatasetReference"
+					}
+				]
 			},
 			{
-				"name": "Validate_Silver",
-				"type": "Script",
+				"name": "Load_Gold",
+				"type": "SqlServerStoredProcedure",
 				"dependsOn": [
 					{
-						"activity": "Validate_Bronze",
+						"activity": "Copy_Bronze_to_Silver",
 						"dependencyConditions": [
 							"Succeeded"
 						]
@@ -47,84 +234,12 @@
 					"secureInput": false
 				},
 				"userProperties": [],
-				"linkedServiceName": {
-					"referenceName": "ls_synapse_serverless",
-					"type": "LinkedServiceReference"
-				},
 				"typeProperties": {
-					"scripts": [
-						{
-							"type": "NonQuery",
-							"text": "SELECT COUNT(*) as view_count \nFROM sys.views \nWHERE name = 'silver_transactions'"
-						}
-					],
-					"scriptBlockExecutionTimeout": "02:00:00"
-				}
-			},
-			{
-				"name": "Validate_Gold",
-				"type": "Script",
-				"dependsOn": [
-					{
-						"activity": "Validate_Silver",
-						"dependencyConditions": [
-							"Succeeded"
-						]
-					}
-				],
-				"policy": {
-					"timeout": "0.12:00:00",
-					"retry": 0,
-					"retryIntervalInSeconds": 30,
-					"secureOutput": false,
-					"secureInput": false
+					"storedProcedureName": "[gold].[usp_load_gold]"
 				},
-				"userProperties": [],
 				"linkedServiceName": {
-					"referenceName": "ls_synapse_serverless",
+					"referenceName": "ls_synapse_pool",
 					"type": "LinkedServiceReference"
-				},
-				"typeProperties": {
-					"scripts": [
-						{
-							"type": "NonQuery",
-							"text": "SELECT COUNT(*) as view_count \nFROM sys.views \nWHERE name = 'fact_transactions'"
-						}
-					],
-					"scriptBlockExecutionTimeout": "02:00:00"
-				}
-			},
-			{
-				"name": "Log_Pipeline_Run",
-				"type": "Script",
-				"dependsOn": [
-					{
-						"activity": "Validate_Gold",
-						"dependencyConditions": [
-							"Succeeded"
-						]
-					}
-				],
-				"policy": {
-					"timeout": "0.12:00:00",
-					"retry": 0,
-					"retryIntervalInSeconds": 30,
-					"secureOutput": false,
-					"secureInput": false
-				},
-				"userProperties": [],
-				"linkedServiceName": {
-					"referenceName": "ls_synapse_serverless",
-					"type": "LinkedServiceReference"
-				},
-				"typeProperties": {
-					"scripts": [
-						{
-							"type": "NonQuery",
-							"text": "SELECT \n    'Pipeline completed successfully' AS status,\n    GETDATE() AS completed_at,\n    'Bronze → Silver → Gold validated' AS message"
-						}
-					],
-					"scriptBlockExecutionTimeout": "02:00:00"
 				}
 			}
 		],

@@ -1,0 +1,103 @@
+{
+	"name": "ds_silver_transactions",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_synapse_pool",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlDWTable",
+		"schema": [
+			{
+				"name": "transaction_id",
+				"type": "nvarchar"
+			},
+			{
+				"name": "cardholder_id",
+				"type": "nvarchar"
+			},
+			{
+				"name": "merchant_id",
+				"type": "nvarchar"
+			},
+			{
+				"name": "amount_cad",
+				"type": "decimal",
+				"precision": 18,
+				"scale": 2
+			},
+			{
+				"name": "channel",
+				"type": "nvarchar"
+			},
+			{
+				"name": "network",
+				"type": "nvarchar"
+			},
+			{
+				"name": "transaction_type",
+				"type": "nvarchar"
+			},
+			{
+				"name": "payment_method",
+				"type": "nvarchar"
+			},
+			{
+				"name": "response_code",
+				"type": "nvarchar"
+			},
+			{
+				"name": "is_approved",
+				"type": "nvarchar"
+			},
+			{
+				"name": "is_international",
+				"type": "nvarchar"
+			},
+			{
+				"name": "is_flagged_suspicious",
+				"type": "nvarchar"
+			},
+			{
+				"name": "processing_time_ms",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "ip_country",
+				"type": "nvarchar"
+			},
+			{
+				"name": "transaction_datetime",
+				"type": "datetime2",
+				"scale": 7
+			},
+			{
+				"name": "transaction_date",
+				"type": "date"
+			},
+			{
+				"name": "amount_band",
+				"type": "nvarchar"
+			},
+			{
+				"name": "province",
+				"type": "nvarchar"
+			},
+			{
+				"name": "_ingested_at",
+				"type": "datetime2",
+				"scale": 7
+			},
+			{
+				"name": "_silver_loaded_at",
+				"type": "datetime2",
+				"scale": 7
+			}
+		],
+		"typeProperties": {
+			"schema": "silver",
+			"table": "transactions"
+		}
+	}
+}

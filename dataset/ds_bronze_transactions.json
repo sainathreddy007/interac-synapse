@@ -1,0 +1,90 @@
+{
+	"name": "ds_bronze_transactions",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_adls_interac",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": "real_time_transactions.json",
+				"folderPath": "streaming/real_time_transactions",
+				"fileSystem": "interac-raw"
+			}
+		},
+		"schema": {
+			"type": "object",
+			"properties": {
+				"event_id": {
+					"type": "string"
+				},
+				"event_type": {
+					"type": "string"
+				},
+				"event_timestamp": {
+					"type": "string"
+				},
+				"transaction_id": {
+					"type": "string"
+				},
+				"cardholder_id": {
+					"type": "string"
+				},
+				"merchant_id": {
+					"type": "string"
+				},
+				"transaction_type": {
+					"type": "string"
+				},
+				"payment_method": {
+					"type": "string"
+				},
+				"channel": {
+					"type": "string"
+				},
+				"network": {
+					"type": "string"
+				},
+				"amount_cad": {
+					"type": "number"
+				},
+				"currency": {
+					"type": "string"
+				},
+				"response_code": {
+					"type": "string"
+				},
+				"terminal_id": {
+					"type": "string"
+				},
+				"device_fingerprint": {
+					"type": "string"
+				},
+				"ip_address_hash": {
+					"type": "string"
+				},
+				"ip_country": {
+					"type": "string"
+				},
+				"is_international": {
+					"type": "string"
+				},
+				"processing_time_ms": {
+					"type": "integer"
+				},
+				"is_flagged_suspicious": {
+					"type": "string"
+				},
+				"session_id": {
+					"type": "string"
+				},
+				"partition_key": {
+					"type": "string"
+				}
+			}
+		}
+	}
+}
