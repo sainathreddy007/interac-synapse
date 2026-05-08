@@ -11,6 +11,12 @@
 		"ls_adls_interac_properties_typeProperties_url": {
 			"value": "https://interacfabricstorage.dfs.core.windows.net/"
 		},
+		"ls_synapse_pool_properties_typeProperties_server": {
+			"value": "synapse-interac-fraud.sql.azuresynapse.net"
+		},
+		"ls_synapse_pool_properties_typeProperties_database": {
+			"value": "interac_sql_pool"
+		},
 		"ls_synapse_serverless_properties_typeProperties_server": {
 			"value": "synapse-interac-fraud.sql.azuresynapse.net"
 		},
