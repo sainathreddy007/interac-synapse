@@ -39,6 +39,15 @@
 						"mappings": [
 							{
 								"source": {
+									"path": "$['event_timestamp']"
+								},
+								"sink": {
+									"name": "transaction_datetime",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
 									"path": "$['transaction_id']"
 								},
 								"sink": {
@@ -151,6 +160,15 @@
 								},
 								"sink": {
 									"name": "is_flagged_suspicious",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['partition_key']"
+								},
+								"sink": {
+									"name": "province",
 									"type": "String"
 								}
 							}
