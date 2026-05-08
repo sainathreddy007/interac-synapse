@@ -111,31 +111,11 @@
 							},
 							{
 								"source": {
-									"path": "$['currency']"
-								}
-							},
-							{
-								"source": {
 									"path": "$['response_code']"
 								},
 								"sink": {
 									"name": "response_code",
 									"type": "String"
-								}
-							},
-							{
-								"source": {
-									"path": "$['terminal_id']"
-								}
-							},
-							{
-								"source": {
-									"path": "$['device_fingerprint']"
-								}
-							},
-							{
-								"source": {
-									"path": "$['ip_address_hash']"
 								}
 							},
 							{
@@ -172,16 +152,6 @@
 								"sink": {
 									"name": "is_flagged_suspicious",
 									"type": "String"
-								}
-							},
-							{
-								"source": {
-									"path": "$['session_id']"
-								}
-							},
-							{
-								"source": {
-									"path": "$['partition_key']"
 								}
 							}
 						]
