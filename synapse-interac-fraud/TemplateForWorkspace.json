@@ -156,36 +156,12 @@
 									},
 									{
 										"source": {
-											"path": "$['currency']"
-										},
-										"sink": {}
-									},
-									{
-										"source": {
 											"path": "$['response_code']"
 										},
 										"sink": {
 											"name": "response_code",
 											"type": "String"
 										}
-									},
-									{
-										"source": {
-											"path": "$['terminal_id']"
-										},
-										"sink": {}
-									},
-									{
-										"source": {
-											"path": "$['device_fingerprint']"
-										},
-										"sink": {}
-									},
-									{
-										"source": {
-											"path": "$['ip_address_hash']"
-										},
-										"sink": {}
 									},
 									{
 										"source": {
@@ -222,18 +198,6 @@
 											"name": "is_flagged_suspicious",
 											"type": "String"
 										}
-									},
-									{
-										"source": {
-											"path": "$['session_id']"
-										},
-										"sink": {}
-									},
-									{
-										"source": {
-											"path": "$['partition_key']"
-										},
-										"sink": {}
 									}
 								]
 							}
