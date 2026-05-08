@@ -39,21 +39,6 @@
 						"mappings": [
 							{
 								"source": {
-									"path": "$['event_id']"
-								}
-							},
-							{
-								"source": {
-									"path": "$['event_type']"
-								}
-							},
-							{
-								"source": {
-									"path": "$['event_timestamp']"
-								}
-							},
-							{
-								"source": {
 									"path": "$['transaction_id']"
 								},
 								"sink": {
