@@ -1,0 +1,368 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"type": "string",
+			"metadata": "Workspace name",
+			"defaultValue": "synapse-interac-fraud"
+		},
+		"synapse-interac-fraud-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'synapse-interac-fraud-WorkspaceDefaultSqlServer'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:synapse-interac-fraud.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"ls_adls_interac_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://interacfabricstorage.dfs.core.windows.net/"
+		},
+		"ls_synapse_serverless_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "synapse-interac-fraud.sql.azuresynapse.net"
+		},
+		"ls_synapse_serverless_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "interac_sql_pool"
+		},
+		"synapse-interac-fraud-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://interacfabricstorage.dfs.core.windows.net"
+		}
+	},
+	"variables": {
+		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/interac_sql_pool')]",
+			"type": "Microsoft.Synapse/workspaces/sqlPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/interacspkpool')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/PL_Interac_Bronze_to_Gold')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Validate_Bronze",
+						"type": "Script",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"linkedServiceName": {
+							"referenceName": "ls_synapse_serverless",
+							"type": "LinkedServiceReference"
+						},
+						"typeProperties": {
+							"scripts": [
+								{
+									"type": "NonQuery",
+									"text": "SELECT COUNT(*) as view_count \nFROM sys.views \nWHERE name = 'bronze_raw_transactions'"
+								}
+							],
+							"scriptBlockExecutionTimeout": "02:00:00"
+						}
+					},
+					{
+						"name": "Validate_Silver",
+						"type": "Script",
+						"dependsOn": [
+							{
+								"activity": "Validate_Bronze",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"linkedServiceName": {
+							"referenceName": "ls_synapse_serverless",
+							"type": "LinkedServiceReference"
+						},
+						"typeProperties": {
+							"scripts": [
+								{
+									"type": "NonQuery",
+									"text": "SELECT COUNT(*) as view_count \nFROM sys.views \nWHERE name = 'silver_transactions'"
+								}
+							],
+							"scriptBlockExecutionTimeout": "02:00:00"
+						}
+					},
+					{
+						"name": "Validate_Gold",
+						"type": "Script",
+						"dependsOn": [
+							{
+								"activity": "Validate_Silver",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"linkedServiceName": {
+							"referenceName": "ls_synapse_serverless",
+							"type": "LinkedServiceReference"
+						},
+						"typeProperties": {
+							"scripts": [
+								{
+									"type": "NonQuery",
+									"text": "SELECT COUNT(*) as view_count \nFROM sys.views \nWHERE name = 'fact_transactions'"
+								}
+							],
+							"scriptBlockExecutionTimeout": "02:00:00"
+						}
+					},
+					{
+						"name": "Log_Pipeline_Run",
+						"type": "Script",
+						"dependsOn": [
+							{
+								"activity": "Validate_Gold",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"linkedServiceName": {
+							"referenceName": "ls_synapse_serverless",
+							"type": "LinkedServiceReference"
+						},
+						"typeProperties": {
+							"scripts": [
+								{
+									"type": "NonQuery",
+									"text": "SELECT \n    'Pipeline completed successfully' AS status,\n    GETDATE() AS completed_at,\n    'Bronze → Silver → Gold validated' AS message"
+								}
+							],
+							"scriptBlockExecutionTimeout": "02:00:00"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2026-05-08T02:35:40Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/ls_synapse_serverless')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/ls_adls_interac')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('ls_adls_interac_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/ls_synapse_serverless')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"server": "[parameters('ls_synapse_serverless_properties_typeProperties_server')]",
+					"database": "[parameters('ls_synapse_serverless_properties_typeProperties_database')]",
+					"encrypt": "mandatory",
+					"trustServerCertificate": false,
+					"authenticationType": "SystemAssignedManagedIdentity"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/synapse-interac-fraud-WorkspaceDefaultSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('synapse-interac-fraud-WorkspaceDefaultSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/synapse-interac-fraud-WorkspaceDefaultStorage')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('synapse-interac-fraud-WorkspaceDefaultStorage_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AutoResolveIntegrationRuntime')]",
+			"type": "Microsoft.Synapse/workspaces/integrationRuntimes",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WorkspaceSystemIdentity')]",
+			"type": "Microsoft.Synapse/workspaces/credentials",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "ManagedIdentity",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 1')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "-- Create Bronze database\nCREATE DATABASE interac_bronze;\n\nCREATE MASTER KEY ENCRYPTION BY PASSWORD = 'Interac@Synapse#2024!Secure';\n\nCREATE DATABASE SCOPED CREDENTIAL adls_mi_credential\nWITH IDENTITY = 'Managed Identity';\n\nCREATE EXTERNAL DATA SOURCE adls_interac_raw\nWITH (\n    LOCATION   = 'https://interacfabricstorage.dfs.core.windows.net/interac-raw',\n    CREDENTIAL = adls_mi_credential\n);\n\nSELECT name, credential_identity FROM sys.database_scoped_credentials;\nSELECT name, location FROM sys.external_data_sources;\n\n-- Bronze view for raw transactions\nUSE interac_bronze;\n\nCREATE OR ALTER VIEW bronze_raw_transactions AS\nSELECT\n    JSON_VALUE(doc, '$.transaction_id')        AS transaction_id,\n    JSON_VALUE(doc, '$.cardholder_id')         AS cardholder_id,\n    JSON_VALUE(doc, '$.merchant_id')           AS merchant_id,\n    CAST(JSON_VALUE(doc, '$.amount_cad') AS DECIMAL(18,2)) AS amount_cad,\n    JSON_VALUE(doc, '$.channel')               AS channel,\n    JSON_VALUE(doc, '$.network')               AS network,\n    JSON_VALUE(doc, '$.transaction_type')      AS transaction_type,\n    JSON_VALUE(doc, '$.payment_method')        AS payment_method,\n    JSON_VALUE(doc, '$.response_code')         AS response_code,\n    JSON_VALUE(doc, '$.is_approved')           AS is_approved,\n    JSON_VALUE(doc, '$.is_international')      AS is_international,\n    JSON_VALUE(doc, '$.is_flagged_suspicious') AS is_flagged_suspicious,\n    CAST(JSON_VALUE(doc, '$.processing_time_ms') AS BIGINT) AS processing_time_ms,\n    JSON_VALUE(doc, '$.ip_country')            AS ip_country,\n    JSON_VALUE(doc, '$.event_timestamp')       AS event_timestamp,\n    JSON_VALUE(doc, '$.partition_key')         AS partition_key,\n    GETDATE()                                  AS _ingested_at\nFROM OPENROWSET(\n    BULK 'streaming/real_time_transactions/real_time_transactions.json',\n    DATA_SOURCE = 'adls_interac_raw',\n    FORMAT = 'CSV',\n    FIELDQUOTE = '0x0b',\n    FIELDTERMINATOR = '0x0b',\n    ROWTERMINATOR = '0x0a'\n) WITH (doc NVARCHAR(MAX)) AS rows;\n\n-- Verify\nSELECT TOP 5 * FROM bronze_raw_transactions;\n\n-- Create Silver database\nCREATE DATABASE interac_silver;\n\nUSE interac_silver;\n\nCREATE MASTER KEY ENCRYPTION BY PASSWORD = 'Interac@Synapse#2024!Secure';\n\n-- Link to Bronze\nCREATE DATABASE SCOPED CREDENTIAL adls_mi_credential\nWITH IDENTITY = 'Managed Identity';\n\nCREATE EXTERNAL DATA SOURCE adls_interac_raw\nWITH (\n    LOCATION   = 'https://interacfabricstorage.dfs.core.windows.net/interac-raw',\n    CREDENTIAL = adls_mi_credential\n);\n\n-- Silver cleaned transactions view\nCREATE OR ALTER VIEW silver_transactions AS\nSELECT\n    transaction_id,\n    cardholder_id,\n    merchant_id,\n    amount_cad,\n    UPPER(TRIM(channel))           AS channel,\n    UPPER(TRIM(network))           AS network,\n    UPPER(TRIM(transaction_type))  AS transaction_type,\n    UPPER(TRIM(payment_method))    AS payment_method,\n    response_code,\n    CASE WHEN response_code = '00' THEN 'Y' ELSE 'N' END AS is_approved,\n    is_international,\n    is_flagged_suspicious,\n    processing_time_ms,\n    ip_country,\n    TRY_CAST(event_timestamp AS DATETIME2) AS transaction_datetime,\n    CAST(TRY_CAST(event_timestamp AS DATETIME2) AS DATE) AS transaction_date,\n    CASE \n        WHEN amount_cad < 25   THEN 'MICRO'\n        WHEN amount_cad < 100  THEN 'SMALL'\n        WHEN amount_cad < 500  THEN 'MEDIUM'\n        WHEN amount_cad < 2000 THEN 'LARGE'\n        ELSE 'VERY_LARGE'\n    END AS amount_band,\n    partition_key AS province,\n    _ingested_at,\n    GETDATE() AS _silver_loaded_at\nFROM interac_bronze.dbo.bronze_raw_transactions\nWHERE transaction_id IS NOT NULL\nAND   amount_cad > 0;\n\n-- Verify\nSELECT TOP 5 * FROM silver_transactions;\n\n-- Create Gold database\nCREATE DATABASE interac_gold;\n\nUSE interac_gold;\n\nCREATE MASTER KEY ENCRYPTION BY PASSWORD = 'Interac@Synapse#2024!Secure';\n\n-- ── Dimension: Date ───────────────────────────────────────\nCREATE OR ALTER VIEW dim_date AS\nSELECT DISTINCT\n    CAST(transaction_date AS DATE)                    AS date_key,\n    YEAR(transaction_date)                            AS year,\n    MONTH(transaction_date)                           AS month,\n    DAY(transaction_date)                             AS day,\n    DATENAME(WEEKDAY, transaction_date)               AS day_name,\n    DATENAME(MONTH, transaction_date)                 AS month_name,\n    DATEPART(QUARTER, transaction_date)               AS quarter,\n    CASE WHEN DATENAME(WEEKDAY, transaction_date) \n         IN ('Saturday','Sunday') THEN 1 ELSE 0 END  AS is_weekend\nFROM interac_silver.dbo.silver_transactions\nWHERE transaction_date IS NOT NULL;\n\n-- ── Dimension: Channel ────────────────────────────────────\nCREATE OR ALTER VIEW dim_channel AS\nSELECT DISTINCT\n    channel                                           AS channel_key,\n    channel                                           AS channel_name,\n    CASE channel\n        WHEN 'POS'         THEN 'In-Person'\n        WHEN 'ONLINE'      THEN 'Digital'\n        WHEN 'ATM'         THEN 'Self-Service'\n        WHEN 'MOBILE'      THEN 'Digital'\n        WHEN 'CONTACTLESS' THEN 'In-Person'\n        ELSE 'Other'\n    END                                               AS channel_category\nFROM interac_silver.dbo.silver_transactions;\n\n-- ── Fact: Transactions ────────────────────────────────────\nCREATE OR ALTER VIEW fact_transactions AS\nSELECT\n    transaction_id,\n    cardholder_id,\n    merchant_id,\n    CAST(transaction_date AS DATE)                    AS date_key,\n    channel                                           AS channel_key,\n    amount_cad,\n    amount_band,\n    transaction_type,\n    payment_method,\n    network,\n    response_code,\n    is_approved,\n    is_international,\n    is_flagged_suspicious,\n    processing_time_ms,\n    ip_country,\n    province,\n    transaction_datetime,\n    _silver_loaded_at\nFROM interac_silver.dbo.silver_transactions;\n\n-- ── Gold KPI: Fraud Summary ───────────────────────────────\nCREATE OR ALTER VIEW gold_fraud_summary AS\nSELECT\n    transaction_date                                  AS date,\n    channel,\n    ip_country,\n    COUNT(*)                                          AS total_transactions,\n    SUM(CAST(amount_cad AS FLOAT))                   AS total_volume_cad,\n    SUM(CASE WHEN is_flagged_suspicious = 'Y' \n             THEN 1 ELSE 0 END)                       AS fraud_count,\n    ROUND(SUM(CASE WHEN is_flagged_suspicious = 'Y' \n             THEN 1.0 ELSE 0 END) / COUNT(*) * 100, 2) AS fraud_rate_pct,\n    SUM(CASE WHEN is_approved = 'Y' \n             THEN 1 ELSE 0 END)                       AS approved_count,\n    AVG(CAST(processing_time_ms AS FLOAT))           AS avg_processing_ms\nFROM interac_silver.dbo.silver_transactions\nGROUP BY transaction_date, channel, ip_country;\n\n-- ── Gold KPI: Merchant Performance ───────────────────────\nCREATE OR ALTER VIEW gold_merchant_performance AS\nSELECT\n    merchant_id,\n    COUNT(*)                                          AS total_transactions,\n    SUM(CAST(amount_cad AS FLOAT))                   AS total_volume_cad,\n    AVG(CAST(amount_cad AS FLOAT))                   AS avg_transaction_cad,\n    SUM(CASE WHEN is_flagged_suspicious = 'Y' \n             THEN 1 ELSE 0 END)                       AS fraud_count,\n    ROUND(SUM(CASE WHEN is_flagged_suspicious = 'Y' \n             THEN 1.0 ELSE 0 END) / COUNT(*) * 100, 2) AS fraud_rate_pct,\n    SUM(CASE WHEN is_approved = 'Y' \n             THEN 1 ELSE 0 END)                       AS approved_count\nFROM interac_silver.dbo.silver_transactions\nGROUP BY merchant_id;\n\n-- ── Gold KPI: Hourly Volume ───────────────────────────────\nCREATE OR ALTER VIEW gold_hourly_volume AS\nSELECT\n    CAST(transaction_datetime AS DATE)               AS transaction_date,\n    DATEPART(HOUR, transaction_datetime)             AS transaction_hour,\n    channel,\n    COUNT(*)                                         AS total_transactions,\n    SUM(CAST(amount_cad AS FLOAT))                  AS total_volume_cad,\n    SUM(CASE WHEN is_flagged_suspicious = 'Y' \n             THEN 1 ELSE 0 END)                      AS fraud_count\nFROM interac_silver.dbo.silver_transactions\nWHERE transaction_datetime IS NOT NULL\nGROUP BY CAST(transaction_datetime AS DATE),\n         DATEPART(HOUR, transaction_datetime),\n         channel;\n\n-- ── Verify all views ──────────────────────────────────────\nSELECT TOP 5 * FROM dim_date;\nSELECT TOP 5 * FROM dim_channel;\nSELECT TOP 5 * FROM fact_transactions;\nSELECT TOP 5 * FROM gold_fraud_summary;\nSELECT TOP 5 * FROM gold_merchant_performance;\nSELECT TOP 5 * FROM gold_hourly_volume;",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "interac_gold",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/interacspkpool')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"autoPause": {
+					"enabled": true,
+					"delayInMinutes": 15
+				},
+				"autoScale": {
+					"enabled": true,
+					"maxNodeCount": 10,
+					"minNodeCount": 3
+				},
+				"nodeCount": 10,
+				"nodeSize": "Medium",
+				"nodeSizeFamily": "MemoryOptimized",
+				"sparkVersion": "3.5",
+				"isComputeIsolationEnabled": false,
+				"sessionLevelPackagesEnabled": false,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "canadacentral"
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/interac_sql_pool')]",
+			"type": "Microsoft.Synapse/workspaces/sqlPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"collation": "SQL_Latin1_General_CP1_CI_AS",
+				"maxSizeBytes": 263882790666240,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "canadacentral"
+		}
+	]
+}
